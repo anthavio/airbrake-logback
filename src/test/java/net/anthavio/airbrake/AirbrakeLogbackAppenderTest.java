@@ -69,7 +69,7 @@ public class AirbrakeLogbackAppenderTest {
 
 	@Before
 	public void before() {
-		appender.setNotify(Notify.ALL);
+		appender.setNotify(Notify.EXCEPTIONS);
 		Mockito.reset(notifier);
 		//Mockito.reset(captor);
 	}
@@ -100,6 +100,8 @@ public class AirbrakeLogbackAppenderTest {
 
 	@Test
 	public void testSimpleMessage() {
+		// Given - configure message sending
+		appender.setNotify(Notify.ALL);
 		// When
 		logger.error("This is error message");
 		// Then

@@ -42,7 +42,7 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 
 	private String env;
 
-	private Notify notify = Notify.ALL;
+	private Notify notify = Notify.EXCEPTIONS; //compatible with airbrake-java
 
 	private Backtrace backtraceBuilder = new Backtrace(new LinkedList<String>());
 
