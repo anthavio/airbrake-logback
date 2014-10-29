@@ -7,7 +7,7 @@ Jenkins [![Build Status](https://vanek.ci.cloudbees.com/buildStatus/icon?job=air
 
 Logback Appender for Airbrake
 
-Built on official [Airbrake library](https://github.com/airbrake/airbrake-java) adding LogbackAppender
+Built on the top of the official [Airbrake library](https://github.com/airbrake/airbrake-java) adding Logback Appender
 
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -31,9 +31,9 @@ Built on official [Airbrake library](https://github.com/airbrake/airbrake-java) 
 </configuration>
 ```
 
-On the top of [Airbrake library](https://github.com/airbrake/airbrake-java) functionality, airbrake-logback also can send simple error messages without Exception stacktrace. Line where error was logged is still captured and sent to Airbrake. Configure it setting <notify>ALL</notify> in logback.xml 
+Additionaly to [Airbrake java](https://github.com/airbrake/airbrake-java) functionality, airbrake-logback also can send simple one line error messages without stacktraces. Line where error was logged is still captured and sent to Airbrake. Configure it setting <notify>ALL</notify> in logback.xml 
 ```
-<appender name="AIRBRAKE" class="net.anthavio.airbrake.AirbrakeLogbackAppender">
+	<appender name="AIRBRAKE" class="net.anthavio.airbrake.AirbrakeLogbackAppender">
 		<apiKey>YOUR_AIRBRAKE_API_KEY</apiKey>
 		<env>test</env>
 		<notify>ALL</notify>
@@ -43,7 +43,7 @@ On the top of [Airbrake library](https://github.com/airbrake/airbrake-java) func
 		</filter>
 	</appender>
 ```
-
+Java code
 ```
 Logger logger = LoggerFactory.getLogger(getClass());
 logger.error("I'm going to Airbrake! Exact line will be there too");
