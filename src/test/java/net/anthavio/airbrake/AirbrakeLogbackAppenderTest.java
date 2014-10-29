@@ -19,7 +19,9 @@ import net.anthavio.airbrake.AirbrakeLogbackAppender.Notify;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
@@ -150,6 +152,33 @@ public class AirbrakeLogbackAppenderTest {
 		logger.error("This is error message", exception);
 		// Then
 		Mockito.verifyZeroInteractions(notifier);
+	}
+
+	@Rule
+	public ExpectedException thrown = ExpectedException.none();
+
+	@Test
+	public void testConfiguration() {
+		// When
+		AirbrakeLogbackAppender appender = new AirbrakeLogbackAppender();
+		// Then
+		Assertions.assertThat(appender.getNotify()).isEqualTo(Notify.EXCEPTIONS);
+
+		// When
+		appender.setEnabled(false);
+		// Then
+		Assertions.assertThat(appender.getNotify()).isEqualTo(Notify.OFF);
+
+		// When
+		appender.setEnabled(true);
+		// Then
+		Assertions.assertThat(appender.getNotify()).isEqualTo(Notify.EXCEPTIONS);
+
+		thrown.expect(IllegalArgumentException.class);
+		thrown.expectMessage("Wrong url: www.example.org");
+
+		appender.setUrl("www.example.org");
+
 	}
 
 }

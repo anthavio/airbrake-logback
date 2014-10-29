@@ -75,6 +75,7 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 	}
 
 	public void setUrl(final String url) {
+		//TODO this should do addError instead of throwing exception
 		if (url == null || !url.startsWith("http")) {
 			throw new IllegalArgumentException("Wrong url: " + url);
 		}
@@ -86,15 +87,12 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 	}
 
 	public void setNotify(Notify notify) {
-		if (notify == null) {
-			throw new IllegalArgumentException("Null Notify");
-		}
 		this.notify = notify;
 	}
 
 	public void setEnabled(boolean enabled) {
 		if (enabled) {
-			notify = Notify.ALL;
+			notify = Notify.EXCEPTIONS;
 		} else {
 			notify = Notify.OFF;
 		}
