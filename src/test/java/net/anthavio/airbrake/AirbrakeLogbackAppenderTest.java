@@ -173,10 +173,10 @@ public class AirbrakeLogbackAppenderTest {
 		appender.setEnabled(true);
 		// Then
 		Assertions.assertThat(appender.getNotify()).isEqualTo(Notify.EXCEPTIONS);
-
+		
 		//When with protocol
 		appender.setUrl("https://www.example.org");
-
+		
 		//When without protocol
 		thrown.expect(IllegalArgumentException.class);
 		thrown.expectMessage("Wrong url: www.example.org");
