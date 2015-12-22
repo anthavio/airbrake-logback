@@ -32,107 +32,103 @@ import ch.qos.logback.core.AppenderBase;
  */
 public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 
-	public static enum Notify {
-		ALL, EXCEPTIONS, OFF;
-	}
+    public static enum Notify {
+        ALL, EXCEPTIONS, OFF;
+    }
 
-	private final AirbrakeNotifier airbrakeNotifier;
+    private final AirbrakeNotifier airbrakeNotifier;
 
-	private String apiKey;
+    private String apiKey;
 
-	private String env;
+    private String env;
 
-	private Notify notify = Notify.EXCEPTIONS; //compatible with airbrake-java
+    private Notify notify = Notify.EXCEPTIONS; // default compatible with airbrake-java
 
-	private Backtrace backtraceBuilder = new Backtrace(new LinkedList<String>());
+    private boolean enabled = true;
 
-	public AirbrakeLogbackAppender() {
-		airbrakeNotifier = new AirbrakeNotifier();
-	}
+    private Backtrace backtraceBuilder = new Backtrace(new LinkedList<String>());
 
-	protected AirbrakeLogbackAppender(AirbrakeNotifier airbrakeNotifier) {
-		this.airbrakeNotifier = airbrakeNotifier;
-	}
+    public AirbrakeLogbackAppender() {
+        airbrakeNotifier = new AirbrakeNotifier();
+    }
 
-	public void setApiKey(final String apiKey) {
-		this.apiKey = apiKey;
-	}
+    protected AirbrakeLogbackAppender(AirbrakeNotifier airbrakeNotifier) {
+        this.airbrakeNotifier = airbrakeNotifier;
+    }
 
-	public String getEnv() {
-		return env;
-	}
+    public void setApiKey(final String apiKey) {
+        this.apiKey = apiKey;
+    }
 
-	public void setEnv(final String env) {
-		this.env = env;
-	}
+    public String getEnv() {
+        return env;
+    }
 
-	public Backtrace getBacktraceBuilder() {
-		return backtraceBuilder;
-	}
+    public void setEnv(final String env) {
+        this.env = env;
+    }
 
-	public void setBacktraceBuilder(Backtrace backtraceBuilder) {
-		this.backtraceBuilder = backtraceBuilder;
-	}
+    public Backtrace getBacktraceBuilder() {
+        return backtraceBuilder;
+    }
 
-	public void setUrl(final String url) {
-		//TODO this should do addError instead of throwing exception
-		if (url == null || !url.startsWith("http")) {
-			throw new IllegalArgumentException("Wrong url: " + url);
-		}
-		airbrakeNotifier.setUrl(url);
-	}
+    public void setBacktraceBuilder(Backtrace backtraceBuilder) {
+        this.backtraceBuilder = backtraceBuilder;
+    }
 
-	public Notify getNotify() {
-		return notify;
-	}
+    public void setUrl(final String url) {
+        //TODO this should do addError instead of throwing exception
+        if (url == null || !url.startsWith("http")) {
+            throw new IllegalArgumentException("Wrong url: " + url);
+        }
+        airbrakeNotifier.setUrl(url);
+    }
 
-	public void setNotify(Notify notify) {
-		this.notify = notify;
-	}
+    public Notify getNotify() {
+        return notify;
+    }
 
-	public void setEnabled(boolean enabled) {
-		if (enabled) {
-			notify = Notify.EXCEPTIONS;
-		} else {
-			notify = Notify.OFF;
-		}
-	}
+    public void setNotify(Notify notify) {
+        this.notify = notify;
+    }
 
-	@Override
-	protected void append(final ILoggingEvent event) {
-		if (notify == Notify.OFF) {
-			return;
-		}
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 
-		IThrowableProxy proxy;
-		if ((proxy = event.getThrowableProxy()) != null) {
-			Throwable throwable = ((ThrowableProxy) proxy).getThrowable();
-			AirbrakeNotice notice = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, backtraceBuilder,
-					throwable, env).newNotice();
-			airbrakeNotifier.notify(notice);
+    @Override
+    protected void append(final ILoggingEvent event) {
+        if (!enabled || notify == Notify.OFF) {
+            return;
+        }
 
-		} else if (notify == Notify.ALL) {
-			StackTraceElement[] stackTrace = event.getCallerData();
-			AirbrakeNotice notice = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey,
-					event.getFormattedMessage(), stackTrace[0], env).newNotice();
-			airbrakeNotifier.notify(notice);
-		}
-	}
+        IThrowableProxy proxy;
+        if ((proxy = event.getThrowableProxy()) != null) {
+            Throwable throwable = ((ThrowableProxy) proxy).getThrowable();
+            AirbrakeNotice notice = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, backtraceBuilder, throwable, env).newNotice();
+            airbrakeNotifier.notify(notice);
 
-	@Override
-	public void stop() {
-		super.stop();
-	}
+        } else if (notify == Notify.ALL) {
+            StackTraceElement[] stackTrace = event.getCallerData();
+            AirbrakeNotice notice = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, event.getFormattedMessage(), stackTrace[0], env).newNotice();
+            airbrakeNotifier.notify(notice);
+        }
+    }
 
-	@Override
-	public void start() {
-		if (apiKey == null || apiKey.isEmpty()) {
-			addError("API key not set for the appender named [" + name + "].");
-		}
-		if (env == null || env.isEmpty()) {
-			addError("Environment not set for the appender named [" + name + "].");
-		}
-		super.start();
-	}
+    @Override
+    public void stop() {
+        super.stop();
+    }
+
+    @Override
+    public void start() {
+        if (apiKey == null || apiKey.isEmpty()) {
+            addError("API key not set for the appender named [" + name + "].");
+        }
+        if (env == null || env.isEmpty()) {
+            addError("Environment not set for the appender named [" + name + "].");
+        }
+        super.start();
+    }
 
 }
