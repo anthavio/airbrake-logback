@@ -17,22 +17,24 @@ package net.anthavio.airbrake;
 
 import java.util.LinkedList;
 
-import airbrake.AirbrakeNotice;
 import airbrake.AirbrakeNotifier;
 import airbrake.Backtrace;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.AppenderBase;
+import net.anthavio.airbrake.http.HttpServletRequestEnhancerFactory;
+import net.anthavio.airbrake.http.RequestEnhancer;
+import net.anthavio.airbrake.http.RequestEnhancerFactory;
 
 /**
- * 
+ *
  * @author martin.vanek
  *
  */
 public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 
-    public static enum Notify {
+    public enum Notify {
         ALL, EXCEPTIONS, OFF;
     }
 
@@ -41,6 +43,10 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
     private String apiKey;
 
     private String env;
+
+    private String requestEnhancerFactory;
+
+    private RequestEnhancer requestEnhancer;
 
     private Notify notify = Notify.EXCEPTIONS; // default compatible with airbrake-java
 
@@ -76,6 +82,14 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
         this.backtraceBuilder = backtraceBuilder;
     }
 
+    public String getRequestEnhancerFactory() {
+        return requestEnhancerFactory;
+    }
+
+    public void setRequestEnhancerFactory(String requestEnhancerFactory) {
+        this.requestEnhancerFactory = requestEnhancerFactory;
+    }
+
     public void setUrl(final String url) {
         //TODO this should do addError instead of throwing exception
         if (url == null || !url.startsWith("http")) {
@@ -104,14 +118,22 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 
         IThrowableProxy proxy;
         if ((proxy = event.getThrowableProxy()) != null) {
+            // Exception are always notified
             Throwable throwable = ((ThrowableProxy) proxy).getThrowable();
-            AirbrakeNotice notice = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, backtraceBuilder, throwable, env).newNotice();
-            airbrakeNotifier.notify(notice);
+            AirbrakeNoticeBuilderUsingFilteredSystemProperties builder = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, backtraceBuilder, throwable, env);
+            if (requestEnhancer != null) {
+                requestEnhancer.enhance(builder);
+            }
+            airbrakeNotifier.notify(builder.newNotice());
 
         } else if (notify == Notify.ALL) {
+            // others only if ALL is set
             StackTraceElement[] stackTrace = event.getCallerData();
-            AirbrakeNotice notice = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, event.getFormattedMessage(), stackTrace[0], env).newNotice();
-            airbrakeNotifier.notify(notice);
+            AirbrakeNoticeBuilderUsingFilteredSystemProperties builder = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, event.getFormattedMessage(), stackTrace[0], env);
+            if (requestEnhancer != null) {
+                requestEnhancer.enhance(builder);
+            }
+            airbrakeNotifier.notify(builder.newNotice());
         }
     }
 
@@ -127,6 +149,17 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
         }
         if (env == null || env.isEmpty()) {
             addError("Environment not set for the appender named [" + name + "].");
+        }
+        if (requestEnhancerFactory != null) {
+            RequestEnhancerFactory factory = null;
+            try {
+                factory = (RequestEnhancerFactory) Class.forName(requestEnhancerFactory).newInstance();
+            } catch (Exception x) {
+                throw new IllegalStateException("Cannot create " + requestEnhancerFactory, x);
+            }
+            requestEnhancer = factory.get();
+        } else if (HttpServletRequestEnhancerFactory.isServletApi()) {
+            requestEnhancer = new HttpServletRequestEnhancerFactory().get();
         }
         super.start();
     }

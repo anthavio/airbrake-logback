@@ -69,4 +69,18 @@ public class AirbrakeNoticeBuilderUsingFilteredSystemProperties extends Airbrake
 		}
 	}
 
+	/**
+	 * Airflow builder has protected visibility on building methods for some reason
+	 */
+
+	public void request(Map<String, Object> request) {
+		super.request(request);
+	}
+
+	public void session(Map<String, Object> session) {
+		super.session(session);
+	}
+
+	public void setRequest(String url, String component) { super.setRequest(url, component); }
+
 }
