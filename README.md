@@ -39,7 +39,6 @@ Configure it setting &lt;notify&gt;ALL&lt;/notify&gt; in logback.xml Possible va
 		<apiKey>YOUR_AIRBRAKE_API_KEY</apiKey>
 		<env>test</env>
 		<notify>ALL</notify>
-
 		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
 			<level>ERROR</level>
 		</filter>
@@ -49,4 +48,76 @@ Java code
 ```
 Logger logger = LoggerFactory.getLogger(getClass());
 logger.error("I'm going to Airbrake! Exact line will be there too");
+```
+
+HTTP request and session integration
+------------------------------------
+If you happen to use library in Servlet container you can have HTTP request and session information included in Airbrake notifications. To enable it you have to add AirflowServletRequestFilter into your configuration
+web.xml exmple
+```
+  <filter> 
+    <filter-name>AirbrakeFilter</filter-name>
+    <filter-class>net.anthavio.airbrake.http.AirflowServletRequestFilter</filter-class> 
+  </filter> 
+  <filter-mapping> 
+    <filter-name>AirbrakeFilter</filter-name>
+    <url-pattern>/*</url-pattern> 
+  </filter-mapping> 
+```
+Spring Boot @Configuration example
+```
+	@Bean
+	public FilterRegistrationBean airbrakeFilter() {
+		FilterRegistrationBean registration = new FilterRegistrationBean();
+		registration.setFilter(new AirbrakeServletRequestFilter());
+		registration.addUrlPatterns("/*");
+		return registration;
+	}
+```
+In case you are unhappy with shipped AirbrakeServletRequestFilter and HttpServletRequestEnhancer, you can implement your own...
+```
+package com.example;
+import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
+import net.anthavio.airbrake.http.RequestEnhancer;
+import net.anthavio.airbrake.http.RequestEnhancerFactory;
+
+// Simpe example implementation
+public class HackyEnhancerFactory implements RequestEnhancerFactory {
+
+    @Override
+    public RequestEnhancer get() {
+        return new HackyEnhancer();
+    }
+
+    static class HackyEnhancer implements RequestEnhancer<Void> {
+
+        @Override
+        public void setRequest(Void request) {
+            // nothing
+        }
+
+        @Override
+        public void endRequest(Void request) {
+            // nothing
+        }
+
+        @Override
+        public void enhance(AirbrakeNoticeBuilderUsingFilteredSystemProperties builder) {
+            builder.setRequest("http://localhost","");
+        }
+    }
+}
+```
+and then configure it in logback.xml using 
+```
+	<appender name="AIRBRAKE" class="net.anthavio.airbrake.AirbrakeLogbackAppender">
+		<apiKey>YOUR_AIRBRAKE_API_KEY</apiKey>
+		<env>test</env>
+		<notify>ALL</notify>
+		<requestEnhancerFactory>com.example.HackyEnhancerFactory</requestEnhancerFactory>
+		
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>ERROR</level>
+		</filter>
+	</appender>
 ```
