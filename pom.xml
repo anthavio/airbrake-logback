@@ -10,7 +10,7 @@
 	
 	<groupId>net.anthavio</groupId>
 	<artifactId>airbrake-logback</artifactId>
-	<version>1.0.2-SNAPSHOT</version>
+	<version>1.0.2</version>
 	<packaging>jar</packaging>
 	
 	<name>airbrake-logback</name>
@@ -23,7 +23,7 @@
 		<url>https://github.com/anthavio/airbrake-logback</url>
 		<connection>scm:git:git://github.com/anthavio/airbrake-logback.git</connection>
 		<developerConnection>scm:git:git@github.com:anthavio/airbrake-logback.git</developerConnection>
-	  <tag>HEAD</tag>
+	  <tag>v1.0.2</tag>
   </scm>
 
 	<distributionManagement>
