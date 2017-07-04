@@ -15,8 +15,6 @@
  */
 package net.anthavio.airbrake.http;
 
-import airbrake.AirbrakeNotice;
-import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -27,15 +25,13 @@ import org.springframework.mock.web.MockHttpSession;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Map;
 
 public class AirflowServletRequestFilterTest {
 
     @Test
     public void testFactoryClassNotFound() {
-        AirflowServletRequestFilter filter = new AirflowServletRequestFilter();
+        AirbrakeServletRequestFilter filter = new AirbrakeServletRequestFilter();
         FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
         Mockito.when(filterConfig.getInitParameter("requestEnhancerFactory")).thenReturn("wrong.ClassName");
         try {
@@ -48,7 +44,7 @@ public class AirflowServletRequestFilterTest {
 
     @Test
     public void testDefaultFactory() throws ServletException, IOException {
-        AirflowServletRequestFilter filter = new AirflowServletRequestFilter();
+        AirbrakeServletRequestFilter filter = new AirbrakeServletRequestFilter();
         FilterConfig filterConfig = Mockito.mock(FilterConfig.class);
         Mockito.when(filterConfig.getInitParameter("requestEnhancerFactory")).thenReturn(null);
         filter.init(filterConfig);

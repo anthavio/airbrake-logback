@@ -22,7 +22,7 @@ import java.io.IOException;
 /**
  * Created by m.vanek on 30/06/2017.
  */
-public class AirflowServletRequestFilter implements Filter {
+public class AirbrakeServletRequestFilter implements Filter {
 
     private RequestEnhancer<HttpServletRequest> requestEnhancer;
 

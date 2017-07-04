@@ -70,7 +70,7 @@ public class AirbrakeNoticeBuilderUsingFilteredSystemProperties extends Airbrake
 	}
 
 	/**
-	 * Airflow builder has protected visibility on building methods for some reason
+	 * Airbrake builder has protected visibility on building methods for some reason
 	 */
 
 	public void request(Map<String, Object> request) {
