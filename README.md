@@ -52,12 +52,12 @@ logger.error("I'm going to Airbrake! Exact line will be there too");
 
 HTTP request and session integration
 ------------------------------------
-If you happen to use library in Servlet container you can have HTTP request and session information included in Airbrake notifications. To enable it you have to add AirflowServletRequestFilter into your configuration
+If you happen to use library in Servlet container you can have HTTP request and session information included in Airbrake notifications. To enable it you have to add AirbrakeServletRequestFilter into your configuration
 web.xml exmple
 ```
   <filter> 
     <filter-name>AirbrakeFilter</filter-name>
-    <filter-class>net.anthavio.airbrake.http.AirflowServletRequestFilter</filter-class> 
+    <filter-class>net.anthavio.airbrake.http.AirbrakeServletRequestFilter</filter-class> 
   </filter> 
   <filter-mapping> 
     <filter-name>AirbrakeFilter</filter-name>
@@ -74,7 +74,7 @@ Spring Boot @Configuration example
 		return registration;
 	}
 ```
-In case you are unhappy with shipped AirbrakeServletRequestFilter and HttpServletRequestEnhancer, you can implement your own...
+In case you are unhappy with provided AirbrakeServletRequestFilter and HttpServletRequestEnhancer, you can implement your own...
 ```
 package com.example;
 import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
