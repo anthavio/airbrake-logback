@@ -6,6 +6,7 @@
 		<groupId>net.anthavio.maven</groupId>
 		<artifactId>anthavio-super-pom</artifactId>
 		<version>5</version>
+		<relativePath/>
 	</parent>
 	
 	<groupId>net.anthavio</groupId>
@@ -43,7 +44,7 @@
 		
 		<developer>
 			<id>anthavio</id>
-			<name>Martin Vaněk</name>
+			<name>Martin Vanek</name>
 			<email>anthavio@post.cz</email>
 			<roles>
 				<role>Java Developer</role>
