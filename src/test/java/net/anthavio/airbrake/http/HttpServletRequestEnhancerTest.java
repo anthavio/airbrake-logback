@@ -15,11 +15,11 @@
  */
 package net.anthavio.airbrake.http;
 
-import airbrake.AirbrakeNotice;
-import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
+import io.airbrake.javabrake.Notice;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockServletContext;
 
 import java.util.Map;
 
@@ -34,32 +34,33 @@ public class HttpServletRequestEnhancerTest {
     public void testEnhance() {
 
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addParameter("paramName","paramValue");
-        request.addParameter("pmulti", new String[] {"v1","v2"});
+        request.addParameter("paramName", "paramValue");
+        request.addParameter("pmulti", new String[]{"v1", "v2"});
         request.setContextPath("/webcontext");
         request.setRequestURI("/webcontext/whatever?xxx=yyy");
 
-        MockHttpSession session= new MockHttpSession();
-        session.putValue("sessionName","sessionValue");
+        MockHttpSession session = new MockHttpSession();
+        session.putValue("sessionName", "sessionValue");
         request.setSession(session);
+
+        MockServletContext context = new MockServletContext();
+        HttpServletRequestEnhancerFactory.init(context);
 
         HttpServletRequestEnhancer enhancer = new HttpServletRequestEnhancerFactory().get();
         enhancer.setRequest(request);
 
-        StackTraceElement stElement = new StackTraceElement("declaringClass", "methodName",
-                "fileName", 5);
-        AirbrakeNoticeBuilderUsingFilteredSystemProperties builder = new AirbrakeNoticeBuilderUsingFilteredSystemProperties("akpiKey","error message", stElement,"environment");
-        enhancer.enhance(builder);
-        AirbrakeNotice notice = builder.newNotice();
+        Notice notice = new Notice(new RuntimeException("Just for fun"));
+        enhancer.enhance(notice);
 
-        assertThat(notice.url()).isEqualTo("http://localhost:80/webcontext/whatever?xxx=yyy");
-        assertThat(notice.component()).isEqualTo("/webcontext");
 
-        Map<String, Object> requestMap = notice.request();
-        assertThat(requestMap).containsEntry("paramName","paramValue");
-        assertThat(requestMap).containsEntry("pmulti","v1,v2");
+        assertThat(notice.url).isEqualTo("http://localhost:80/webcontext/whatever?xxx=yyy");
+        assertThat(notice.context.get("component")).isEqualTo("/webcontext");
 
-        Map<String, Object> sessionMap = notice.session();
-        assertThat(sessionMap).containsEntry("sessionName","sessionValue");
+        Map<String, Object> requestMap = notice.params;
+        assertThat(requestMap).containsEntry("paramName", "paramValue");
+        assertThat(requestMap).containsEntry("pmulti", "v1,v2");
+
+        Map<String, Object> sessionMap = notice.session;
+        assertThat(sessionMap).containsEntry("sessionName", "sessionValue");
     }
 }

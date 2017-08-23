@@ -11,7 +11,7 @@
 	
 	<groupId>net.anthavio</groupId>
 	<artifactId>airbrake-logback</artifactId>
-	<version>1.0.4-SNAPSHOT</version>
+	<version>2.0.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	
 	<name>airbrake-logback</name>
@@ -74,18 +74,8 @@
 		
 		<dependency>
 			<groupId>io.airbrake</groupId>
-			<artifactId>airbrake-java</artifactId>
-			<version>2.2.8</version>
-			<exclusions>
-				<exclusion>
-					<groupId>commons-logging</groupId>
-					<artifactId>commons-logging</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>log4j</groupId>
-					<artifactId>log4j</artifactId>
-				</exclusion>
-			</exclusions>
+			<artifactId>javabrake</artifactId>
+			<version>0.1.0</version>
 		</dependency>
 
 		<!-- test -->

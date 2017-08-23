@@ -15,6 +15,11 @@
  */
 package net.anthavio.airbrake.http;
 
+import io.airbrake.javabrake.Notice;
+
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * Created by m.vanek on 30/06/2017.
  */
@@ -36,10 +41,16 @@ public class HttpServletRequestEnhancerFactory implements RequestEnhancerFactory
         return IS_SERVLET_API;
     }
 
-    private static final HttpServletRequestEnhancer instance = new HttpServletRequestEnhancer();
+    private static HttpServletRequestEnhancer enhancer; // single instance of enhancer
+
+    public static HttpServletRequestEnhancer init(ServletContext servletContext) {
+        enhancer = new HttpServletRequestEnhancer(servletContext);
+        return enhancer;
+    }
 
     @Override
     public HttpServletRequestEnhancer get() {
-        return instance;
+        return enhancer;
     }
+
 }

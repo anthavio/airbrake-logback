@@ -15,7 +15,7 @@
  */
 package net.anthavio.airbrake.hack;
 
-import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
+import io.airbrake.javabrake.Notice;
 import net.anthavio.airbrake.http.RequestEnhancer;
 import net.anthavio.airbrake.http.RequestEnhancerFactory;
 
@@ -42,8 +42,8 @@ public class HackyEnhancerFactory implements RequestEnhancerFactory {
         }
 
         @Override
-        public void enhance(AirbrakeNoticeBuilderUsingFilteredSystemProperties builder) {
-            builder.setRequest("http://localhost","");
+        public void enhance(Notice notice) {
+            notice.setContext("url","http://localhost");
         }
     }
 }

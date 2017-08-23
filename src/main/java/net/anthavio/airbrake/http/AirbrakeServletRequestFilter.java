@@ -38,7 +38,7 @@ public class AirbrakeServletRequestFilter implements Filter {
             }
             requestEnhancer = factory.get();
         } else {
-            requestEnhancer = new HttpServletRequestEnhancerFactory().get();
+            requestEnhancer = HttpServletRequestEnhancerFactory.init(filterConfig.getServletContext());
         }
     }
 

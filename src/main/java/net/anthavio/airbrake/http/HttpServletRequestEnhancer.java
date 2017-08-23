@@ -15,13 +15,12 @@
  */
 package net.anthavio.airbrake.http;
 
-import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
+import io.airbrake.javabrake.Notice;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by m.vanek on 30/06/2017.
@@ -29,6 +28,12 @@ import java.util.Map;
 public class HttpServletRequestEnhancer implements RequestEnhancer<HttpServletRequest> {
 
     private static final ThreadLocal<HttpServletRequest> tlRequest = new ThreadLocal<HttpServletRequest>();
+
+    private final ServletContext servletContext;
+
+    public HttpServletRequestEnhancer(ServletContext servletContext) {
+        this.servletContext = servletContext;
+    }
 
     @Override
     public void setRequest(HttpServletRequest request) {
@@ -41,52 +46,79 @@ public class HttpServletRequestEnhancer implements RequestEnhancer<HttpServletRe
     }
 
     @Override
-    public void enhance(AirbrakeNoticeBuilderUsingFilteredSystemProperties builder) {
+    public void enhance(Notice notice) {
+        doContext(notice, servletContext);
         HttpServletRequest request = tlRequest.get();
         if (request != null) {
-            doRequest(builder, request);
-            doParameters(builder, request);
+            doRequest(notice, request);
+            doParameters(notice, request);
             HttpSession session = request.getSession(false);
             if (session != null) {
-                doSession(session, builder);
+                doSession(notice, session);
             }
         }
     }
 
-    protected void doRequest(AirbrakeNoticeBuilderUsingFilteredSystemProperties builder, HttpServletRequest request) {
+    protected void doRequest(Notice notice, HttpServletRequest request) {
         StringBuffer urlBuffer = request.getRequestURL();
         String query = request.getQueryString();
         if (query != null && query.length() != 0) {
             urlBuffer.append('?').append(query);
         }
-        builder.setRequest(urlBuffer.toString(), request.getContextPath());
+
+        // https://airbrake.io/docs/api/#create-notice-v3
+
+        notice.url = urlBuffer.toString();
+        notice.setContext("component", request.getContextPath());
+        //notice.setContext("url",urlBuffer.toString());
+        request.getRemoteUser();
+
+        notice.setContext("remoteAddr", request.getLocalAddr());
+        notice.setContext("userAddr", request.getRemoteAddr());
 
     }
 
-    protected void doParameters(AirbrakeNoticeBuilderUsingFilteredSystemProperties builder, HttpServletRequest request) {
-        Map<String, Object> paramap = new HashMap<>();
+    protected void doParameters(Notice notice, HttpServletRequest request) {
+
         Enumeration pnames = request.getParameterNames();
         while (pnames.hasMoreElements()) {
             String pname = (String) pnames.nextElement();
             String[] pvalues = request.getParameterValues(pname);
             if (pvalues.length == 1) {
-                paramap.put(pname, pvalues[0]);
+                notice.setParam(pname, pvalues[0]);
             } else {
-                paramap.put(pname, String.join(",", pvalues));
+                notice.setParam(pname, join(pvalues, ","));
             }
         }
-        builder.request(paramap);
     }
 
-    protected void doSession(HttpSession session, AirbrakeNoticeBuilderUsingFilteredSystemProperties builder) {
-        Map<String, Object> sessionMap = new HashMap<String, Object>();
+    protected void doSession(Notice notice, HttpSession session) {
         Enumeration snames = session.getAttributeNames();
         while (snames.hasMoreElements()) {
             String sname = (String) snames.nextElement();
             Object svalue = session.getAttribute(sname);
-            sessionMap.put(sname, svalue);
+            notice.setSession(sname, svalue);
         }
-        builder.session(sessionMap);
+        notice.setSession("JSESSIONID", session.getId());
+    }
+
+    protected void doContext(Notice notice, ServletContext servletContext) {
+        notice.setContext("rootDirectory", servletContext.getRealPath("/"));
+    }
+
+    public static String join(String[] values, String delim) {
+        if (values != null) {
+            if (values.length == 1) {
+                return values[0];
+            } else {
+                StringBuilder sb = new StringBuilder();
+                for (String value : values) {
+                    sb.append(value).append(delim);
+                }
+                return sb.deleteCharAt(sb.length() - 1).toString();
+            }
+        }
+        return null;
     }
 
 }

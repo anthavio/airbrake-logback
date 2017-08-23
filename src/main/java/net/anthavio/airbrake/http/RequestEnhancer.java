@@ -15,18 +15,25 @@
  */
 package net.anthavio.airbrake.http;
 
-import net.anthavio.airbrake.AirbrakeNoticeBuilderUsingFilteredSystemProperties;
-
-import javax.servlet.http.HttpServletRequest;
+import io.airbrake.javabrake.Notice;
 
 /**
  * Created by m.vanek on 30/06/2017.
  */
 public interface RequestEnhancer<T> {
 
+    /**
+     * Server API
+     */
     void setRequest(T request);
 
+    /**
+     * Server API
+     */
     void endRequest(T request);
 
-    void enhance(AirbrakeNoticeBuilderUsingFilteredSystemProperties builder);
+    /**
+     * Notification API
+     */
+    void enhance(Notice notice);
 }

@@ -15,10 +15,10 @@
  */
 package net.anthavio.airbrake;
 
-import java.util.LinkedList;
+import java.util.Arrays;
 
-import airbrake.AirbrakeNotifier;
-import airbrake.Backtrace;
+import io.airbrake.javabrake.*;
+
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.ThrowableProxy;
@@ -28,58 +28,52 @@ import net.anthavio.airbrake.http.RequestEnhancer;
 import net.anthavio.airbrake.http.RequestEnhancerFactory;
 
 /**
- *
  * @author martin.vanek
- *
+ * <p>
+ * javabrake is v3 only and has url path hardcoded
+ * String.format("%s/api/v3/projects/%d/notices", host, this.projectId);
+ * so and only hostname can be changed
+ * <p>
+ * v3 API
+ * https://airbrake.io/docs/api/#create-notice-v3
+ * v2 API
+ * https://airbrake.io/docs/legacy-xml-api/
  */
 public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 
     public enum Notify {
-        ALL, EXCEPTIONS, OFF;
+        EVERYTHING, EXCEPTIONS
     }
 
-    private final AirbrakeNotifier airbrakeNotifier;
+    public enum SendMode {
+        SYNC, ASYNC
+    }
 
-    private String apiKey;
+    private String projectKey;
 
-    private String env;
+    private Integer projectId;
 
     private String requestEnhancerFactory;
 
-    private RequestEnhancer requestEnhancer;
-
     private Notify notify = Notify.EXCEPTIONS; // default compatible with airbrake-java
+
+    private SendMode sendMode = SendMode.ASYNC;
 
     private boolean enabled = true;
 
-    private Backtrace backtraceBuilder = new Backtrace(new LinkedList<String>());
+    private RequestEnhancerFactory requestEnhancerFactoryInstance;
+
+    private Notifier notifier;
 
     public AirbrakeLogbackAppender() {
-        airbrakeNotifier = new AirbrakeNotifier();
+        // for logback
     }
 
-    protected AirbrakeLogbackAppender(AirbrakeNotifier airbrakeNotifier) {
-        this.airbrakeNotifier = airbrakeNotifier;
-    }
-
-    public void setApiKey(final String apiKey) {
-        this.apiKey = apiKey;
-    }
-
-    public String getEnv() {
-        return env;
-    }
-
-    public void setEnv(final String env) {
-        this.env = env;
-    }
-
-    public Backtrace getBacktraceBuilder() {
-        return backtraceBuilder;
-    }
-
-    public void setBacktraceBuilder(Backtrace backtraceBuilder) {
-        this.backtraceBuilder = backtraceBuilder;
+    /**
+     * For testing...
+     */
+    protected AirbrakeLogbackAppender(Notifier notifier) {
+        this.notifier = notifier;
     }
 
     public String getRequestEnhancerFactory() {
@@ -90,12 +84,15 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
         this.requestEnhancerFactory = requestEnhancerFactory;
     }
 
-    public void setUrl(final String url) {
+    /**
+     * https://api.airbrake.io or http://errbit.yourdomain.com
+     */
+    public void setHost(final String host) {
         //TODO this should do addError instead of throwing exception
-        if (url == null || !url.startsWith("http")) {
-            throw new IllegalArgumentException("Wrong url: " + url);
+        if (host == null || !host.startsWith("http")) {
+            throw new IllegalArgumentException("Wrong url: " + host);
         }
-        airbrakeNotifier.setUrl(url);
+        notifier.setHost(host);
     }
 
     public Notify getNotify() {
@@ -110,31 +107,68 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
         this.enabled = enabled;
     }
 
+    public String getProjectKey() {
+        return projectKey;
+    }
+
+    public void setProjectKey(String projectKey) {
+        this.projectKey = projectKey;
+    }
+
+    public Integer getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Integer projectId) {
+        this.projectId = projectId;
+    }
+
+    public SendMode getSendMode() {
+        return sendMode;
+    }
+
+    public void setSendMode(SendMode sendMode) {
+        this.sendMode = sendMode;
+    }
+
     @Override
     protected void append(final ILoggingEvent event) {
-        if (!enabled || notify == Notify.OFF) {
+        if (!enabled) {
             return;
         }
 
         IThrowableProxy proxy;
         if ((proxy = event.getThrowableProxy()) != null) {
-            // Exception are always notified
+            // Exception notifications are always sent
             Throwable throwable = ((ThrowableProxy) proxy).getThrowable();
-            AirbrakeNoticeBuilderUsingFilteredSystemProperties builder = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, backtraceBuilder, throwable, env);
-            if (requestEnhancer != null) {
-                requestEnhancer.enhance(builder);
-            }
-            airbrakeNotifier.notify(builder.newNotice());
 
-        } else if (notify == Notify.ALL) {
-            // others only if ALL is set
-            StackTraceElement[] stackTrace = event.getCallerData();
-            AirbrakeNoticeBuilderUsingFilteredSystemProperties builder = new AirbrakeNoticeBuilderUsingFilteredSystemProperties(apiKey, event.getFormattedMessage(), stackTrace[0], env);
-            if (requestEnhancer != null) {
-                requestEnhancer.enhance(builder);
-            }
-            airbrakeNotifier.notify(builder.newNotice());
+            Notice notice = new Notice(throwable);
+            notice.setContext("error_message",event.getFormattedMessage());
+            // FIXME Allowed values: debug, info, notice, warning, error, critical, alert, emergency, invalid.
+            notice.setContext("severity",event.getLevel());
+            enhanceAndSend(notice);
+
+
+        } else if (notify == Notify.EVERYTHING) {
+            // Send other notifications then Exception only when Notify.EVERYTHING is set
+            StackTraceElement stackTraceElement = event.getCallerData()[0];
+            NoticeStackRecord noticeStackRecord = new NoticeStackRecord(stackTraceElement);
+            NoticeError error = new NoticeError(event.getLoggerName(), event.getFormattedMessage(), Arrays.asList(noticeStackRecord));
+            enhanceAndSend(new Notice(Arrays.asList(error)));
         }
+    }
+
+    private void enhanceAndSend(Notice notice) {
+        if (requestEnhancerFactoryInstance != null) {
+            RequestEnhancer enhancer = requestEnhancerFactoryInstance.get();
+            if (enhancer != null) {
+                enhancer.enhance(notice);
+            }
+        }
+        if (sendMode == SendMode.ASYNC)
+            notifier.send(notice);
+        else
+            notifier.sendSync(notice);
     }
 
     @Override
@@ -144,22 +178,29 @@ public class AirbrakeLogbackAppender extends AppenderBase<ILoggingEvent> {
 
     @Override
     public void start() {
-        if (apiKey == null || apiKey.isEmpty()) {
-            addError("API key not set for the appender named [" + name + "].");
-        }
-        if (env == null || env.isEmpty()) {
-            addError("Environment not set for the appender named [" + name + "].");
-        }
-        if (requestEnhancerFactory != null) {
-            RequestEnhancerFactory factory = null;
-            try {
-                factory = (RequestEnhancerFactory) Class.forName(requestEnhancerFactory).newInstance();
-            } catch (Exception x) {
-                throw new IllegalStateException("Cannot create " + requestEnhancerFactory, x);
+        if (notifier == null) {
+            if (projectId == null) {
+                // Have to throw otherwise NullPointerException will be thrown from new Notifier...
+                throw new IllegalArgumentException("PROJECT_ID not set for the appender named [" + name + "].");
             }
-            requestEnhancer = factory.get();
+            if (projectKey == null || projectKey.isEmpty()) {
+                addError("PROJECT_KEY not set for the appender named [" + name + "].");
+            }
+            notifier = new Notifier(projectId, projectKey);
+        }
+
+        if (requestEnhancerFactory != null) {
+            if (!requestEnhancerFactory.isEmpty()) { // Set factory to "" to disable it even in HttpServlet environment
+                try {
+                    requestEnhancerFactoryInstance = (RequestEnhancerFactory) Class.forName(requestEnhancerFactory).newInstance();
+                } catch (Exception x) {
+                    throw new IllegalStateException("Cannot create " + requestEnhancerFactory, x);
+                }
+
+            }
         } else if (HttpServletRequestEnhancerFactory.isServletApi()) {
-            requestEnhancer = new HttpServletRequestEnhancerFactory().get();
+            // This is surely be executed BEFORE AirbrakeServletRequestFilter initialization and RequestEnhancerFactory will return null
+            requestEnhancerFactoryInstance = new HttpServletRequestEnhancerFactory();
         }
         super.start();
     }
